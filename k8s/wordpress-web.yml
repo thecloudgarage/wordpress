@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: wordpress-deployment
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+      - name: wordpress
+        image: wordpress:4-php7.0
+        # uncomment to fix perm issue, see also https://github.com/kubernetes/kubernetes/issues/2630
+        command: ["/bin/sh","-c"]
+        args: ["chmod -R 755 /var/www/html; chown www-data:www-data /var/www/html && apache2-foreground"]
+        ports:
+        - name: http-port
+          containerPort: 80
+        env:
+          - name: WORDPRESS_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: wordpress-secrets
+                key: db-password
+          - name: WORDPRESS_DB_HOST
+            value: wordpress-db
+        volumeMounts:
+        - mountPath: /var/www/html/wp-content
+          name: uploads
+      volumes:
+      - name: uploads
+        nfs:
+          server: fs-6fd45cee.efs.us-east-1.amazonaws.com
+          path: /
